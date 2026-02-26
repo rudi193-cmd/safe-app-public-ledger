@@ -1,0 +1,5 @@
+[project]
+name = "safe-app-public-ledger"
+version = "1.0.0"
+description = "Public records financial auditor — search government budgets and IRS Form 990 filings for nonprofits."
+requires-python = ">=3.10"
