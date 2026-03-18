@@ -39,6 +39,7 @@
   ],
   "privacy_tier": "client_only",
   "local_processing": 0.96,
+  "port": 8422,
   "entry_point": "app.main:run",
   "license": "MIT",
   "repository": "https://github.com/rudi193-cmd/safe-app-public-ledger"
