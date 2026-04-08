@@ -5,7 +5,9 @@ Federal contracts, grants, and awards. Free, no auth.
 https://api.usaspending.gov/api/v2
 """
 
+import threading
 import time
+from datetime import datetime
 import requests
 import sys
 
@@ -17,14 +19,16 @@ _HEADERS = {
 _TIMEOUT = 30
 _RATE_LIMIT = 1.0
 _last_request = 0.0
+_throttle_lock = threading.Lock()
 
 
 def _throttle():
     global _last_request
-    elapsed = time.time() - _last_request
-    if elapsed < _RATE_LIMIT:
-        time.sleep(_RATE_LIMIT - elapsed)
-    _last_request = time.time()
+    with _throttle_lock:
+        elapsed = time.time() - _last_request
+        if elapsed < _RATE_LIMIT:
+            time.sleep(_RATE_LIMIT - elapsed)
+        _last_request = time.time()
 
 
 def search_awards(recipient_name, start_year=None, end_year=None, award_types=None, limit=10):
@@ -40,7 +44,7 @@ def search_awards(recipient_name, start_year=None, end_year=None, award_types=No
     if start_year or end_year:
         filters["time_period"] = [{
             "start_date": f"{start_year or 2000}-10-01",
-            "end_date": f"{end_year or 2025}-09-30",
+            "end_date": f"{end_year or datetime.now().year}-09-30",
         }]
 
     body = {

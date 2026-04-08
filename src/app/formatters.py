@@ -5,11 +5,7 @@ Template-based narrative output in the Ledger voice.
 No LLM needed — precision over flourish.
 """
 
-import sys
-import os
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-from personas import get_persona
+from .personas import get_persona
 
 
 VERDICT_LABELS = {
