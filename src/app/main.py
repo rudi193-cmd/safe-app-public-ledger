@@ -8,7 +8,6 @@ Port 8422.
 import argparse
 import json
 import sys
-import os
 import threading
 import uuid
 
@@ -22,8 +21,7 @@ from .formatters import format_single_result, format_batch_summary
 from .sources import propublica, usaspending, paperclip
 from . import cache
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-from personas import get_persona
+from .personas import get_persona
 
 app = FastAPI(
     title="Public Ledger",
@@ -96,14 +94,14 @@ def check_sources():
 
     # ProPublica
     try:
-        test = propublica.search_nonprofit("test")
+        propublica.search_nonprofit("test")
         results["propublica"] = {"reachable": True, "note": "ProPublica Nonprofit Explorer (IRS 990s)"}
     except Exception:
         results["propublica"] = {"reachable": False}
 
     # USAspending
     try:
-        test = usaspending.search_awards("test", limit=1)
+        usaspending.search_awards("test", limit=1)
         results["usaspending"] = {"reachable": True, "note": "USAspending.gov (federal contracts)"}
     except Exception:
         results["usaspending"] = {"reachable": False}
@@ -237,7 +235,8 @@ def search_paperclip(req: PaperclipSearchRequest):
             )
             return {"count": len(results), "results": results}
     except Exception as e:
-        return {"error": str(e), "count": 0, "results": []}
+        print(f"[paperclip] search error: {e}", file=sys.stderr)
+        return {"error": "Paperclip database unavailable", "count": 0, "results": []}
 
 
 # --- CLI + Entry Point ---
