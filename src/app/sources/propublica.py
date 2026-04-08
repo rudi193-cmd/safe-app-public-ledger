@@ -9,7 +9,11 @@ import time
 import requests
 import sys
 
+from ..cache import get as cache_get, put as cache_put
+
 BASE_URL = "https://projects.propublica.org/nonprofits/api/v2"
+_CACHE_NS = "propublica"
+_CACHE_TTL = 3600  # 1 hour for search, 86400 for filings
 _HEADERS = {"User-Agent": "PublicLedger/1.0 (SAFE App)"}
 _TIMEOUT = 15
 _RATE_LIMIT = 1.0  # seconds between requests
@@ -26,6 +30,9 @@ def _throttle():
 
 def search_nonprofit(name):
     """Search nonprofits by name. Returns list of org summaries."""
+    cached = cache_get(_CACHE_NS, f"search:{name}")
+    if cached is not None:
+        return cached
     _throttle()
     try:
         resp = requests.get(
@@ -39,7 +46,7 @@ def search_nonprofit(name):
             return []
         data = resp.json()
         orgs = data.get("organizations", [])
-        return [
+        results = [
             {
                 "ein": org.get("ein"),
                 "name": org.get("name"),
@@ -51,6 +58,8 @@ def search_nonprofit(name):
             }
             for org in orgs
         ]
+        cache_put(_CACHE_NS, f"search:{name}", results, ttl=_CACHE_TTL)
+        return results
     except requests.RequestException as e:
         print(f"[propublica] search error: {e}", file=sys.stderr)
         return []
@@ -58,6 +67,9 @@ def search_nonprofit(name):
 
 def get_filing(ein):
     """Get full 990 filing data for an organization by EIN."""
+    cached = cache_get(_CACHE_NS, f"filing:{ein}")
+    if cached is not None:
+        return cached
     _throttle()
     try:
         resp = requests.get(
@@ -72,7 +84,7 @@ def get_filing(ein):
         org = data.get("organization", {})
         filings = data.get("filings_with_data", [])
 
-        return {
+        result = {
             "ein": ein,
             "name": org.get("name"),
             "city": org.get("city"),
@@ -94,6 +106,8 @@ def get_filing(ein):
                 for f in filings
             ],
         }
+        cache_put(_CACHE_NS, f"filing:{ein}", result, ttl=86400)  # filings: 24h
+        return result
     except requests.RequestException as e:
         print(f"[propublica] filing error: {e}", file=sys.stderr)
         return None

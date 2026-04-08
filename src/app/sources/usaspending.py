@@ -9,7 +9,11 @@ import time
 import requests
 import sys
 
+from ..cache import get as cache_get, put as cache_put
+
 BASE_URL = "https://api.usaspending.gov/api/v2"
+_CACHE_NS = "usaspending"
+_CACHE_TTL = 7200  # 2 hours — federal data updates slowly
 _HEADERS = {
     "Content-Type": "application/json",
     "User-Agent": "PublicLedger/1.0 (SAFE App)",
@@ -32,6 +36,10 @@ def search_awards(recipient_name, start_year=None, end_year=None, award_types=No
 
     award_types: list of codes. Contracts: ["A","B","C","D"]. Grants: ["02","03","04","05"].
     """
+    cache_key = f"awards:{recipient_name}:{start_year}:{end_year}:{award_types}:{limit}"
+    cached = cache_get(_CACHE_NS, cache_key)
+    if cached is not None:
+        return cached
     _throttle()
     filters = {
         "recipient_search_text": [recipient_name],
@@ -73,7 +81,7 @@ def search_awards(recipient_name, start_year=None, end_year=None, award_types=No
             return []
         data = resp.json()
         results = data.get("results", [])
-        return [
+        awards = [
             {
                 "award_id": r.get("Award ID"),
                 "recipient": r.get("Recipient Name"),
@@ -87,6 +95,8 @@ def search_awards(recipient_name, start_year=None, end_year=None, award_types=No
             }
             for r in results
         ]
+        cache_put(_CACHE_NS, cache_key, awards, ttl=_CACHE_TTL)
+        return awards
     except requests.RequestException as e:
         print(f"[usaspending] search error: {e}", file=sys.stderr)
         return []

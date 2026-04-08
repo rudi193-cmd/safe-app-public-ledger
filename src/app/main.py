@@ -20,6 +20,7 @@ from .models import AuditClaim
 from .engine import audit_claim, audit_batch
 from .formatters import format_single_result, format_batch_summary
 from .sources import propublica, usaspending, paperclip
+from . import cache
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from personas import get_persona
@@ -32,8 +33,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -125,6 +126,8 @@ def check_sources():
         "note": "UK ONS wealth data (static citations, no live API)",
     }
 
+    results["cache"] = cache.stats()
+
     return results
 
 
@@ -206,6 +209,19 @@ def search_spending(req: SpendingSearchRequest):
         end_year=req.end_year,
     )
     return {"recipient": req.recipient, "count": len(results), "results": results}
+
+
+@app.delete("/cache")
+def clear_cache():
+    """Clear the response cache."""
+    count = cache.clear()
+    return {"cleared": count}
+
+
+@app.get("/cache")
+def cache_stats():
+    """Cache stats."""
+    return cache.stats()
 
 
 @app.post("/search/paperclip")
