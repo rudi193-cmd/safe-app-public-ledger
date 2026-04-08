@@ -9,7 +9,7 @@ import sqlite3
 import sys
 import os
 
-DEFAULT_DB = "/mnt/c/Users/Sean/Desktop/Operation Clipboard/paperclip_cube.db"
+DEFAULT_DB = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "paperclip_cube.db")
 
 
 class PaperclipReader:
@@ -101,12 +101,20 @@ class PaperclipReader:
 
         # Path 3: Notes mention
         try:
-            rows = self._conn.execute("""
+            seen_ids = [r["id"] for r in results]
+            if seen_ids:
+                placeholders = ",".join("?" for _ in seen_ids)
+                exclude_clause = f"AND id NOT IN ({placeholders})"
+                params = [f"%{contractor_name}%"] + seen_ids
+            else:
+                exclude_clause = ""
+                params = [f"%{contractor_name}%"]
+            rows = self._conn.execute(f"""
                 SELECT id, full_name, generation, field, occupation,
                        employer, current_location, birth_year, notes
                 FROM pp_persons
-                WHERE notes LIKE ? AND id NOT IN (?)
-            """, (f"%{contractor_name}%", ",".join(str(r["id"]) for r in results) or "0")).fetchall()
+                WHERE notes LIKE ? {exclude_clause}
+            """, params).fetchall()
             for r in rows:
                 d = dict(r)
                 d["match_path"] = "notes"

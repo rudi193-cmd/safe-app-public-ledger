@@ -4,6 +4,7 @@ Audit Engine
 Routes claims to data sources, compares findings, produces verdicts.
 """
 
+import sys
 import time
 from .models import AuditClaim, AuditResult, SourceEvidence
 from .sources import propublica, usaspending, paperclip

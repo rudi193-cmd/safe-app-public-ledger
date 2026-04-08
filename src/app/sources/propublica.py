@@ -5,6 +5,7 @@ IRS Form 990 data for nonprofits. Free, no auth.
 https://projects.propublica.org/nonprofits/api/v2
 """
 
+import threading
 import time
 import requests
 import sys
@@ -14,14 +15,16 @@ _HEADERS = {"User-Agent": "PublicLedger/1.0 (SAFE App)"}
 _TIMEOUT = 15
 _RATE_LIMIT = 1.0  # seconds between requests
 _last_request = 0.0
+_throttle_lock = threading.Lock()
 
 
 def _throttle():
     global _last_request
-    elapsed = time.time() - _last_request
-    if elapsed < _RATE_LIMIT:
-        time.sleep(_RATE_LIMIT - elapsed)
-    _last_request = time.time()
+    with _throttle_lock:
+        elapsed = time.time() - _last_request
+        if elapsed < _RATE_LIMIT:
+            time.sleep(_RATE_LIMIT - elapsed)
+        _last_request = time.time()
 
 
 def search_nonprofit(name):
